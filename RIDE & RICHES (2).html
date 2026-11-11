@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>RIDE &amp; RICHES</title>
+<style>
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;color:#fff;font:14px system-ui,sans-serif;color-scheme:dark;touch-action:none;user-select:none}
+canvas#c{position:fixed;inset:0}
+.pan{position:fixed;background:rgba(10,14,24,.72);border:1px solid #ffffff26;border-radius:12px;padding:8px 12px;backdrop-filter:blur(6px)}
+#tl{top:calc(env(safe-area-inset-top,0px) + 8px);left:8px;display:flex;flex-direction:column;gap:2px}
+#cash{font-size:20px;color:#5dff9a}
+#tr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;text-align:center}
+#mm{width:130px;height:130px;border-radius:50%;border:3px solid #ffffff55;background:#111;display:block}
+#clock{margin-top:2px;font-size:12px;text-shadow:0 1px 3px #000}
+#mis{top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);text-align:center;min-width:170px;max-width:36vw;font-size:13px}
+#bt{bottom:calc(env(safe-area-inset-bottom,0px) + 8px);left:50%;transform:translateX(-50%);width:150px;text-align:center}
+#spd{font-size:34px;font-weight:800;line-height:1}
+.bar{height:7px;background:#ffffff22;border-radius:4px;overflow:hidden;margin:3px 0}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#33c0ff,#5dff9a)}
+#db{background:linear-gradient(90deg,#ff9a33,#ff3355)!important}
+#pr{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);left:50%;transform:translateX(-50%);background:#000a;padding:6px 14px;border-radius:20px;display:none}
+#toast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 70px);left:50%;transform:translateX(-50%);background:#101a2ee6;border:1px solid #5dff9a66;padding:8px 16px;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:60;text-align:center}
+#toast.on{opacity:1}
+#pop{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:15;opacity:0}
+#pop b{font-size:clamp(28px,7vw,60px);color:#ffd23f;text-shadow:0 4px 20px #000}
+#pop span{font-size:clamp(18px,4vw,30px);color:#5dff9a;text-shadow:0 2px 10px #000}
+#pop.go{animation:pp 2.6s ease-out}
+@keyframes pp{0%{opacity:0;transform:scale(.4)}12%{opacity:1;transform:scale(1.1)}22%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-60px)}}
+.hide{display:none!important}
+#tc button{position:fixed;width:66px;height:66px;border-radius:50%;border:2px solid #ffffff66;background:#ffffff26;color:#fff;font-size:15px;font-weight:700;touch-action:none;z-index:5}
+#tc button.d{background:#5dff9a88}
+#tc .sm{width:48px;height:48px;font-size:13px}
+#menu{position:fixed;inset:0;background:#000a;z-index:30;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+#mbox{width:min(96vw,820px);max-height:calc(100% - 16px);background:#0f1626;border:1px solid #ffffff30;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.mh{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#16213a}
+.mh b{flex:1;letter-spacing:2px;color:#ffd23f}
+.tabs{display:flex;gap:4px;padding:6px;overflow-x:auto;background:#121b30}
+.mb{padding:10px;overflow:auto;touch-action:pan-y}
+button{font:inherit;color:#fff;background:#2a3f6b;border:0;border-radius:8px;padding:7px 11px;margin:3px 3px 0 0;cursor:pointer}
+button:hover:not(:disabled){background:#3a5691}
+button:disabled{opacity:.4;cursor:default}
+.tabs button.on{background:#ffd23f;color:#111}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin:6px 0}
+.card{background:#1a2744;border:1px solid #ffffff18;border-radius:10px;padding:9px}
+.card.sel{border-color:#5dff9a}
+.card em{font-size:11px;color:#9bb}
+.g{color:#5dff9a}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.sw{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.sw i{width:30px;height:30px;border-radius:50%;border:2px solid #fff8;cursor:pointer}
+h3{margin:8px 0 2px;color:#9bd}
+small{color:#aab}
+</style></head><body>
+<div id="hud">
+ <div id="tl" class="pan"><b id="cash"></b><span id="bank"></span><span id="rep"></span><span id="veh"></span></div>
+ <div id="tr"><canvas id="mm" width="130" height="130"></canvas><div id="clock"></div></div>
+ <div id="mis" class="pan">No active job · press J</div>
+ <div id="bt" class="pan"><div id="spd">0</div><small>km/h</small>
+  <small style="display:block;text-align:left">⛽ Fuel</small><div class="bar"><i id="fb"></i></div>
+  <small style="display:block;text-align:left">🔧 Damage</small><div class="bar"><i id="db"></i></div></div>
+ <div id="pr"></div>
+</div>
+<div id="tc" class="hide">
+ <button data-k="tl" style="left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px)">◀</button>
+ <button data-k="tr" style="left:88px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px)">▶</button>
+ <button data-k="tv" style="right:96px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px)">◀ REV</button>
+ <button data-k="tg" style="right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);width:78px;height:78px">GAS</button>
+ <button id="bE" class="sm" style="right:10px;top:170px">E</button>
+ <button id="bM" class="sm" style="right:10px;top:226px">☰</button>
+</div>
+<div id="toast"></div><div id="pop"></div>
+<div id="start" style="position:fixed;inset:0;z-index:50;background:radial-gradient(#0b1630cc,#000e);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px"><div><h1 style="font-size:clamp(34px,8vw,72px);letter-spacing:4px;color:#ffd23f">RIDE &amp; RICHES</h1><p style="margin:10px 0 18px;color:#aab">Earn money · buy vehicles · become a millionaire</p><button id="go" style="font-size:22px;padding:14px 38px;background:#ffd23f;color:#111;border-radius:30px">▶ PLAY</button><p style="margin-top:18px;font-size:12px;color:#889">WASD/Arrows drive · Shift gas · Space brake · E interact · G garage · J jobs · Esc menu · Backquote key = admin<br>Mobile: on-screen buttons</p></div></div>
+<div id="menu" class="hide"><div id="mbox"></div></div>
+<div id="err" class="hide" style="position:fixed;inset:0;background:#000;z-index:99;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+function fail(m){var e=document.getElementById('err');e.classList.remove('hide');e.style.display='flex';e.innerHTML='<div><h2>RIDE &amp; RICHES</h2><p style="margin:12px 0">'+m+'</p><button onclick="location.reload()">Reload</button></div>'}
+function boot(){
+'use strict';
+const $=id=>document.getElementById(id),fmt=n=>'$'+Math.floor(n).toLocaleString(S.set.lang=='nl'?'nl-NL':'en-US'),MOB=matchMedia('(pointer:coarse)').matches;
+// name,class,price,kmh,accel,handling,brake,w,h,l,color,tank
+const V=[
+['Pixie Scooter','Scooter',0,45,5,2.6,14,.7,1.1,1.8,'#ff6b6b',8],
+['Roadrunner 250','Motorcycle',2500,150,9,2.8,20,.8,1.2,2.2,'#2d9cff',14],
+['Civic Cruiser','Car',9000,160,7,2.0,16,1.8,1.4,4.2,'#e5e5e5',45],
+['Van Dyke','Van',16000,130,5.5,1.6,14,2,2.2,5,'#f5f5f5',70],
+['Ridge Pickup','Pickup',24000,150,6.5,1.7,15,2.1,1.9,5.4,'#3a7d44',80],
+['Viper GT','Sports',38000,230,10,2.2,20,1.9,1.2,4.4,'#ffb703',55],
+['Cargo Hauler','Delivery',52000,115,5,1.3,13,2.3,3,6.5,'#ff7a00',120],
+['Phantom S1','Supercar',140000,310,13,2.3,24,2,1.15,4.5,'#e63946',70],
+['Titan 8x4','Heavy Truck',95000,105,4.5,1,12,2.6,3.6,9,'#6c757d',250],
+['Aurora Hyper','Hypercar',450000,400,17,2.4,28,2,1.1,4.7,'#9d4edd',75]];
+const COL=['#ff6b6b','#2d9cff','#e5e5e5','#111111','#ffb703','#3a7d44','#9d4edd','#ff7a00','#00d4c8','#c0c0c0'];
+const U=[['Engine','Top speed +6%'],['Acceleration','Accel +8%'],['Handling','Steering +7%'],['Brakes','Braking +8%'],['Fuel Tank','Capacity +15%'],['Tires','Grip & wet handling']];
+const DEF=()=>({cash:500,bank:0,rep:0,own:{0:{c:'#ff6b6b',u:[0,0,0,0,0,0],dmg:0,fuel:8}},cur:0,st:{jobs:0,earn:0,km:0,crash:0,types:{}},ach:{},daily:'',t:9,set:{sh:MOB?0:1,wx:'auto'},adm:{}});
+let S;try{S=Object.assign(DEF(),JSON.parse(localStorage.getItem('rr1')||'{}'))}catch(e){S=DEF()}
+let noSave=false;const save=()=>{if(noSave)return;try{localStorage.setItem('rr1',JSON.stringify(S))}catch(e){}};
+const lvl=()=>1+Math.floor(S.rep/100);
+const TRS=[['Package Delivery','Pakketbezorging'],['Taxi Fare','Taxirit'],['Street Race','Straatrace'],['Truck Haul','Vrachtrit'],['Passenger Shuttle','Passagiersshuttle'],['Express Run','Expresrit'],['Pick up the package','Haal het pakket op'],['Deliver the package','Lever het pakket af'],['Pick up the passenger','Haal de passagier op'],['Drop off the passenger','Zet de passagier af'],['Load the cargo','Laad de lading'],['Deliver the cargo','Lever de lading af'],['Pick up the group','Haal de groep op'],['Drop off the group','Zet de groep af'],['Grab the parcel','Pak het pakketje'],['Deliver it fast!','Lever snel af!'],
+['Jobs &amp; rewards','Klussen &amp; beloningen'],['Jobs done:','Klussen voltooid:'],['Jobs','Klussen'],['Settings','Instellingen'],['Stats','Statistieken'],['No active job · press J','Geen actieve klus · druk op J'],['Tap E','Tik E'],['(refuel $3/L)','(tanken $3/L)'],['Level ','Niveau '],['(level ','(niveau '],
+['Active:','Actief:'],['Abandon','Opgeven'],['New jobs','Nieuwe klussen'],['Easy','Makkelijk'],['Medium','Gemiddeld'],['Hard','Moeilijk'],['Accept','Accepteren'],['Needs rep level','Vereist reputatieniveau'],['Needs:','Vereist:'],['Your vehicles','Jouw voertuigen'],['Driving','Aan het rijden'],['Drive 50 km','Rijd 50 km'],['Drive to a glowing building and press E · J for jobs','Rij naar een gloeiend gebouw en druk op E · J voor klussen'],['Drive','Rijden'],['🔧 Damage','🔧 Schade'],['damage','schade'],['Damage','Schade'],['Customize:','Aanpassen:'],
+['Engine','Motor'],['Acceleration','Acceleratie'],['Handling','Wegligging'],['Brakes','Remmen'],['Fuel Tank','Brandstoftank'],['Tires','Banden'],['Top speed +6%','Topsnelheid +6%'],['Accel +8%','Acceleratie +8%'],['Steering +7%','Sturen +7%'],['Braking +8%','Remkracht +8%'],['Capacity +15%','Capaciteit +15%'],['Grip & wet handling','Grip & natte weg'],['Speed Demon','Snelheidsduivel'],['Speed','Snelheid'],['Repair + refuel','Repareren + tanken'],['Repair','Repareren'],['Buy ','Koop '],['Owned','In bezit'],
+['Cash','Contant'],['Savings','Spaargeld'],['(+2% interest every in-game day)','(+2% rente per speldag)'],['Deposit','Storten'],['Withdraw','Opnemen'],['>All<','>Alles<'],['Daily reward available at the Bank!','Dagelijkse beloning beschikbaar bij de Bank!'],['Daily reward','Dagelijkse beloning'],['Come back tomorrow','Kom morgen terug'],['Claim','Ophalen'],['Goal:','Doel:'],
+['Total earned:','Totaal verdiend:'],['Distance:','Afstand:'],['Crashes:','Botsingen:'],['Reputation level','Reputatieniveau'],['Reputation:','Reputatie:'],['Reputation','Reputatie'],['Vehicles:','Voertuigen:'],['Achievements','Prestaties'],
+['First Job','Eerste klus'],['Complete 1 job','Voltooi 1 klus'],['Complete 10 jobs','Voltooi 10 klussen'],['Complete 50 jobs','Voltooi 50 klussen'],['Hustler','Aanpakker'],['Courier Pro','Koerier Pro'],['Collector','Verzamelaar'],['Own 5 vehicles','Bezit 5 voertuigen'],['Own a supercar or hypercar','Bezit een supercar of hypercar'],['Saver','Spaarder'],['Hold $10,000','Bezit $10.000'],['High Roller','Grootverdiener'],['Hold $100,000','Bezit $100.000'],['Road Warrior','Wegkrijger'],['Finish a truck haul','Voltooi een vrachtrit'],['Win a street race','Win een straatrace'],['Hold $1,000,000','Bezit $1.000.000'],['MILLIONAIRE','MILJONAIR'],['You made it to $1,000,000!','Je hebt $1.000.000 bereikt!'],['Achievement:','Prestatie:'],
+['Shadows','Schaduwen'],['Weather:','Weer:'],['Weather','Weer'],['Language','Taal'],['World','Wereld'],['City → Stunt Park','Stad → Stuntpark'],['Stunt Park → City','Stuntpark → Stad'],['>ON<','>AAN<'],['>OFF<','>UIT<'],[': ON<',': AAN<'],[': OFF<',': UIT<'],['>CLEAR<','>HELDER<'],['>RAIN<','>REGEN<'],[': CLEAR<',': HELDER<'],[': RAIN<',': REGEN<'],['Controls:','Besturing:'],['WASD/arrows drive · Shift gas · Space brake · E interact · G garage · J jobs · Esc menu','WASD/pijltjes rijden · Shift gas · Spatie rem · E actie · G garage · J klussen · Esc menu'],['Resume','Verder'],['Reset save','Opslag wissen'],['Click again to erase','Klik nogmaals om te wissen'],
+['Admin access','Beheerderstoegang'],['Wrong password','Verkeerd wachtwoord'],['Password','Wachtwoord'],['Unlock all vehicles','Alle voertuigen ontgrendelen'],['Unlock','Ontgrendel'],['Money','Geld'],['Set cash','Stel geld in'],['>Set<','>Zet<'],['Vehicle wrecked! Repair it at a garage','Voertuig kapot! Repareer het bij een garage'],['Vehicle','Voertuig'],['God mode','Godmodus'],['Infinite fuel','Oneindig brandstof'],['Freeze time','Tijd bevriezen'],['FPS counter','FPS-teller'],['⏰ Time','⏰ Tijd'],['Dawn','Ochtend'],['Noon','Middag'],['Dusk','Avond'],['Night','Nacht'],['Teleport','Teleporteer'],['Complete current job','Voltooi huidige klus'],['Reset daily reward','Reset dagelijkse beloning'],['Lock admin','Admin vergrendelen'],['🚀 Speed','🚀 Snelheid'],['Normal','Normaal'],
+['Stunt Portal','Stuntpoort'],['City Portal','Stadspoort'],['Dealership','Dealer'],['Job Center','Klussencentrum'],['Gas Station','Tankstation'],['🤸 Stunt Park · W/S flip · A/D spin · best ','🤸 Stuntpark · W/S salto · A/D draaien · beste '],['Stunt Park! Find the ramps','Stuntpark! Zoek de ramps'],['Back in the city','Terug in de stad'],['Stunt Park','Stuntpark'],['City','Stad'],['Bad landing!','Slechte landing!'],[' flips · ',` salto's · `],[' flip · ',' salto · '],[' spins · ',' draaiingen · '],[' spin · ',' draaiing · '],['s air · +','s in de lucht · +'],
+['Job accepted:','Klus geaccepteerd:'],['Tank is already full','Tank is al vol'],['Not enough cash for fuel','Niet genoeg geld voor brandstof'],['Refueled','Getankt'],[' L for ',' L voor '],['Purchased','Gekocht'],['Daily interest paid','Dagelijkse rente uitgekeerd'],['MISSION COMPLETE','MISSIE VOLTOOID'],['DAILY REWARD','DAGELIJKSE BELONING'],[`TIME'S UP`,'TIJD IS OP'],['Job failed · -5 rep','Klus mislukt · -5 rep'],
+['⛽ Fuel','⛽ Brandstof'],['▶ PLAY','▶ SPELEN'],['Earn money · buy vehicles · become a millionaire','Verdien geld · koop voertuigen · word miljonair'],['WASD/Arrows drive · Shift gas · Space brake · E interact · G garage · J jobs · Esc menu · Backquote key = admin<br>Mobile: on-screen buttons','WASD/pijltjes rijden · Shift gas · Spatie rem · E actie · G garage · J klussen · Esc menu · Backquote-toets = admin<br>Mobiel: knoppen op het scherm']].sort((a,b)=>b[0].length-a[0].length),
+tr=s=>{if(S.set.lang!='nl')return s;for(const [k,v] of TRS)if(s.includes(k))s=s.split(k).join(v);return s};
+// ---------- renderer
+let R;try{R=new THREE.WebGLRenderer({antialias:!MOB});}catch(e){return fail('WebGL is not available in this browser. Try Chrome with hardware acceleration enabled.')}
+R.setPixelRatio(Math.min(devicePixelRatio,MOB?1.25:1.75));R.setSize(innerWidth,innerHeight);R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.domElement.id='c';document.body.prepend(R.domElement);
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.3,700);scene.fog=new THREE.Fog(0x9fd0ff,80,420);
+addEventListener('resize',()=>{R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+const hemi=new THREE.HemisphereLight(0xbfd8ff,0x4a5a3a,.8),sun=new THREE.DirectionalLight(0xfff1d0,1);
+sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);const sc=sun.shadow.camera;sc.left=sc.bottom=-70;sc.right=sc.top=70;sc.far=400;
+const spot=new THREE.SpotLight(0xfff2cc,0,70,.65,.5);scene.add(hemi,sun,sun.target,spot,spot.target);
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+// ---------- vehicles
+const GC={};
+function mk(i,col){const v=V[i],w=v[7],h=v[8],l=v[9],cls=v[1],g=new THREE.Group(),M=(c,o)=>new THREE.MeshPhongMaterial(Object.assign({color:c,shininess:90},o)),
+add=(a,b,c,x,y,z,m)=>{const me=new THREE.Mesh(GC[a+','+b+','+c]||(GC[a+','+b+','+c]=new THREE.BoxGeometry(a,b,c)),m);me.position.set(x,y,z);me.castShadow=true;g.add(me);return me},
+body=M(col),glass=M(0x0d1522,{shininess:160}),dark=M(0x151515),two=i<2,big=['Van','Delivery','Heavy Truck'].includes(cls);
+let r=Math.min(.42,h*.28)+(cls=='Heavy Truck'?.15:0),wp=[];
+if(two){add(w*.55,h*.3,l*.8,0,h*.4,0,body);add(w*.5,h*.15,l*.3,0,h*.62,-l*.15,dark);add(w*.9,.08,.08,0,h*.95,l*.28,dark);add(.4,.7,.35,0,h*.98,-l*.1,M(0x222a44));add(.3,.3,.3,0,h*1.5,-l*.08,M(0xeeeeee));
+ r=h*.3;wp=[[0,l*.36],[0,-l*.36]]}
+else if(big){add(w,h*.55,l*.28,0,h*.4,l*.36,body);add(w*.92,h*.25,.1,0,h*.55,l*.5,glass);add(w,h*.8,l*.65,0,h*.62,-l*.17,M(cls=='Van'?col:0xdddddd));add(w*.9,.3,l,0,.5,0,dark);
+ wp=[[1,.34],[-1,.34],[1,-.3],[-1,-.3]].map(a=>[a[0]*w/2,a[1]*l]);if(cls=='Heavy Truck')wp.push([w/2,-.42*l],[-w/2,-.42*l])}
+else{const pz=cls=='Pickup'?l*.15:-l*.05;add(w,h*.45,l,0,h*.4,0,body);add(w*.82,h*.4,cls=='Pickup'?l*.32:l*.5,0,h*.78,pz,glass);add(w*.84,.06,cls=='Pickup'?l*.3:l*.42,0,h*.99,pz,body);
+ if(['Sports','Supercar','Hypercar'].includes(cls)){add(w*.95,.06,.45,0,h*.88,-l*.47,dark);add(.08,.25,.08,w*.3,h*.74,-l*.47,dark);add(.08,.25,.08,-w*.3,h*.74,-l*.47,dark)}
+ wp=[[1,.3],[-1,.3],[1,-.3],[-1,-.3]].map(a=>[a[0]*w/2,a[1]*l])}
+const hl=M(0xffffee,{emissive:0xffffaa}),tl=M(0xff2222,{emissive:0xaa0000});
+if(!two){add(w*.22,.15,.05,w*.3,h*.45,l/2,hl);add(w*.22,.15,.05,-w*.3,h*.45,l/2,hl);add(w*.22,.15,.05,w*.3,h*.45,-l/2,tl);add(w*.22,.15,.05,-w*.3,h*.45,-l/2,tl)}else{add(.2,.15,.1,0,h*.8,l*.5,hl)}
+const wg=new THREE.CylinderGeometry(r,r,two?.18:.3,14);wp.forEach(p=>{const wh=new THREE.Mesh(wg,dark);wh.rotation.z=Math.PI/2;wh.position.set(p[0],r,p[1]);wh.castShadow=true;g.add(wh)});
+return g}
+// ---------- world
+const BG=new THREE.BoxGeometry(1,1,1),wm=[],B=[],P=[];
+function tex(e){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.fillStyle=e?'#000':'#cfd6de';x.fillRect(0,0,64,64);for(let i=0;i<4;i++)for(let j=0;j<4;j++){x.fillStyle=e?(Math.random()<.55?'#ffd98a':'#000'):'#2a3a50';x.fillRect(i*16+3,j*16+4,10,8)}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
+const TD=tex(0),TE=tex(1);
+function bld(x,z,w,d,h,col){const a=TD.clone(),b=TE.clone();a.needsUpdate=b.needsUpdate=true;a.repeat.set(Math.max(1,Math.max(w,d)/6),Math.max(1,h/5));b.repeat.copy(a.repeat);
+ const m=new THREE.MeshLambertMaterial({color:col,map:a,emissiveMap:b,emissive:0xffffff,emissiveIntensity:0});wm.push(m);
+ const me=new THREE.Mesh(BG,m);me.scale.set(w,h,d);me.position.set(x,h/2+.4,z);me.castShadow=me.receiveShadow=true;scene.add(me);B.push({x,z,hx:w/2,hz:d/2})}
+const box=(w,h,d,x,y,z,c,sh)=>{const m=new THREE.Mesh(BG,sh?new THREE.MeshLambertMaterial({color:c}):new THREE.MeshBasicMaterial({color:c}));m.scale.set(w,h,d);m.position.set(x,y,z);m.receiveShadow=!!sh;scene.add(m);return m};
+const gr=new THREE.Mesh(new THREE.PlaneGeometry(2200,2200),new THREE.MeshLambertMaterial({color:0x3f6b3a}));gr.rotation.x=-Math.PI/2;gr.receiveShadow=true;scene.add(gr);
+const roadMat=new THREE.MeshPhongMaterial({color:0x2b2d31,shininess:5,specular:0x111111}),RW=k=>Math.abs(k)==5?22:14;
+for(let k=-5;k<=5;k++){const w=RW(k);
+ let m=new THREE.Mesh(BG,roadMat);m.scale.set(w,.2,670);m.position.set(k*60,.1,0);m.receiveShadow=true;scene.add(m);
+ m=new THREE.Mesh(BG,roadMat);m.scale.set(670,.2,w);m.position.set(0,.1,k*60);m.receiveShadow=true;scene.add(m);
+ box(.3,.02,670,k*60,.215,0,0xd9b84a);box(670,.02,.3,0,.225,k*60,0xd9b84a)}
+const POI=[['Dealership',0,0,0xffcc00,'shop'],['Bank',-1,0,0x33dd77,'bank'],['Job Center',0,-1,0x33aaff,'jobs'],['Garage',-1,-1,0xff5555,'garage'],['Gas Station',1,0,0xff8800,'gas'],['Gas Station',-3,3,0xff8800,'gas'],['Garage',3,-3,0xff5555,'garage'],['Dealership',-4,-3,0xffcc00,'shop'],['Parking',1,-1,0x888888,'park'],['Parking',-2,2,0x888888,'park'],['Bank',3,3,0x33dd77,'bank'],['Job Center',-4,3,0x33aaff,'jobs'],['Stunt Portal',2,1,0xcc44ff,'portal']];
+const used={};POI.forEach(p=>used[p[1]+','+p[2]]=p);
+for(let bx=-5;bx<5;bx++)for(let bz=-5;bz<5;bz++){const cx=bx*60+30,cz=bz*60+30,p=used[bx+','+bz];
+ box(38,.4,38,cx,.2,cz,0x9a9a9a,1);
+ if(p){const o={n:p[0],x:cx,z:cz,c:p[3],t:p[4]};P.push(o);
+  if(o.t=='park'){box(36,.05,36,cx,.45,cz,0x35373b);for(let i=-3;i<=3;i++)box(.25,.02,8,cx+i*5,.5,cz-10,0xffffff),box(.25,.02,8,cx+i*5,.5,cz+10,0xffffff);continue}
+  bld(cx,cz,o.t=='gas'?10:16,o.t=='gas'?8:16,7,o.c);
+  const bm=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,80,12,1,true),new THREE.MeshBasicMaterial({color:o.c,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));bm.position.set(cx,40,cz);scene.add(bm);
+  const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='#0b1220cc';x.fillRect(0,0,256,64);x.fillStyle='#'+o.c.toString(16).padStart(6,'0');x.font='bold 30px sans-serif';x.textAlign='center';x.fillText(tr(o.n),128,42);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}));sp.scale.set(24,6,1);sp.position.set(cx,16,cz);scene.add(sp);
+  if(o.t=='gas'){box(24,.5,14,cx,5,cz+14,0xdd3333,1);for(let i=-1;i<=1;i++){const pu=new THREE.Mesh(BG,new THREE.MeshLambertMaterial({color:0xeeeeee}));pu.scale.set(1,2,1);pu.position.set(cx+i*6,1.4,cz+14);scene.add(pu)}}
+  continue}
+ const ring=Math.max(Math.abs(bx+.5),Math.abs(bz+.5));
+ if(ring<=1.6){if(rnd()<.6)bld(cx,cz,18+rnd()*10,18+rnd()*10,45+rnd()*85,[0x8899aa,0x6d7f95,0xaab4c0][Math.floor(rnd()*3)]);else for(let i=0;i<2;i++)bld(cx+(i?9:-9),cz+(i?9:-9),14,14,25+rnd()*30,0x9aa4b0)}
+ else if(ring<=3.6){for(let i=0;i<4;i++)bld(cx+(i%2?9:-9),cz+(i<2?9:-9),10,10,6+rnd()*8,[0xd9b99b,0xe3d5c0,0xb98a7a,0xc9d4c0,0xa9b9d0][Math.floor(rnd()*5)])}
+ else{for(let i=0;i<2;i++)bld(cx,cz+(i?10:-10),34,14,9+rnd()*5,0x8a8f96)}}
+// ---------- player
+let world=1,pm,car={x:0,z:15,h:0,v:0,st:0,y:0};
+function build(){if(pm)scene.remove(pm);pm=mk(S.cur,S.own[S.cur].c);pm.rotation.order='YXZ';scene.add(pm)}
+function eff(){const v=V[S.cur],o=S.own[S.cur],u=o.u,x=S.adm.spd||1;return{vmax:v[3]/3.6*x*(1+.06*u[0])*(1-o.dmg/250)*(o.fuel>0?1:.2),acc:v[4]*x*(1+.08*u[1]),hnd:v[5]*(1+.07*u[2]+.04*u[5])*(1-rainK*.1*(1-u[5]*.15)),brk:v[6]*(1+.08*u[3]),tank:v[11]*(1+.15*u[4])}}
+// ---------- traffic
+const TR=[];for(let i=0;i<(MOB?14:22);i++){const hw=i<5,k=hw?(Math.random()<.5?-5:5):Math.floor(Math.random()*9)-4,ax=Math.random()<.5?'x':'z',dir=Math.random()<.5?1:-1,m=mk([2,3,4,5,6][Math.floor(Math.random()*5)],'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'));scene.add(m);TR.push({m,ax,k,dir,p:Math.random()*600-300,s:hw?20+Math.random()*6:8+Math.random()*6,stop:0})}
+// ---------- markers, rain
+const mark=new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.4,90,16,1,true),new THREE.MeshBasicMaterial({color:0xffcc00,transparent:true,opacity:.4,depthWrite:false,side:THREE.DoubleSide}));mark.visible=false;scene.add(mark);
+const rg=new THREE.BufferGeometry(),rp=new Float32Array(1800*3);for(let i=0;i<1800;i+=2){const x=Math.random()*80-40,y=Math.random()*40,z=Math.random()*80-40;rp.set([x,y,z,x,y+1.2,z],i*3)}
+rg.setAttribute('position',new THREE.BufferAttribute(rp,3));const rain=new THREE.LineSegments(rg,new THREE.LineBasicMaterial({color:0xaaccff,transparent:true,opacity:.5}));rain.frustumCulled=false;rain.visible=false;scene.add(rain);
+let rainK=0,rainOn=false,rainT=40;
+const CITY=scene.children.filter(o=>!o.isLight);
+// ---------- WORLD 2: STUNT PARK
+const W2=new THREE.Group(),R2=[],B2=[],PS={n:'City Portal',x:0,z:-130,c:0xcc44ff,t:'portal'};W2.visible=false;scene.add(W2);
+{const fl=new THREE.Mesh(new THREE.PlaneGeometry(700,700),new THREE.MeshLambertMaterial({color:0x4b5058}));fl.rotation.x=-Math.PI/2;fl.receiveShadow=true;W2.add(fl);
+ const gd=new THREE.GridHelper(300,30,0xffcc00,0x6a7078);gd.position.y=.03;W2.add(gd);
+ const bw=(w,d,x,z)=>{const m=new THREE.Mesh(BG,new THREE.MeshBasicMaterial({color:0xffcc00}));m.scale.set(w,1.2,d);m.position.set(x,.6,z);W2.add(m)};bw(300,1,0,150);bw(300,1,0,-150);bw(1,300,150,0);bw(1,300,-150,0);
+ const ramp=(x,z,rot,w,l,h,c)=>{const s=new THREE.Shape();s.moveTo(0,0);s.lineTo(l,0);s.lineTo(l,h);s.closePath();const g=new THREE.ExtrudeGeometry(s,{depth:w,bevelEnabled:false});g.rotateY(-Math.PI/2);g.translate(w/2,0,0);const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:c}));m.position.set(x,0,z);m.rotation.y=rot;m.castShadow=m.receiveShadow=true;W2.add(m);R2.push([x,z,rot,w,l,h,'r'])};
+ const plat=(x,z,hw,hd,h,c)=>{const m=new THREE.Mesh(BG,new THREE.MeshLambertMaterial({color:c}));m.scale.set(hw*2,h,hd*2);m.position.set(x,h/2,z);m.castShadow=m.receiveShadow=true;W2.add(m);R2.push([x,z,0,hw,hd,h,'p'])};
+ const cont=(x,z,w,d,h,c)=>{const m=new THREE.Mesh(BG,new THREE.MeshLambertMaterial({color:c}));m.scale.set(w,h,d);m.position.set(x,h/2,z);m.castShadow=m.receiveShadow=true;W2.add(m);B2.push({x,z,hx:w/2,hz:d/2,h})};
+ const hp=(x,y,z,r)=>{const m=new THREE.Mesh(new THREE.TorusGeometry(r,.6,8,28),new THREE.MeshBasicMaterial({color:0xff9900}));m.position.set(x,y,z);W2.add(m)};
+ const lab=(t,c,x,y,z)=>{const cv=document.createElement('canvas');cv.width=256;cv.height=64;const g=cv.getContext('2d');g.fillStyle='#0b1220cc';g.fillRect(0,0,256,64);g.fillStyle=c;g.font='bold 28px sans-serif';g.textAlign='center';g.fillText(tr(t),128,42);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false}));s.scale.set(24,6,1);s.position.set(x,y,z);W2.add(s)};
+ ramp(-24,-95,0,8,10,2,0xffb703);ramp(0,-95,0,8,12,3,0xffb703);ramp(24,-95,0,8,14,4.5,0xffb703);
+ ramp(0,-50,0,14,40,14,0xe63946);ramp(0,70,Math.PI,14,40,11,0x2ec4b6);
+ ramp(-75,-50,0,10,30,6,0x8338ec);plat(-75,-5,10,15,6,0x3a86ff);ramp(-75,40,Math.PI,10,30,6,0x8338ec);
+ cont(75,-32,34,3,4,0xff7a00);ramp(75,-62,0,10,18,5,0xffb703);
+ for(let i=0;i<4;i++){ramp(-30,20+i*18,0,12,9,2.5,0x06d6a0);ramp(-30,38+i*18,Math.PI,12,9,2.5,0x06d6a0)}
+ plat(75,70,8,30,5,0xffd23f);ramp(42,70,Math.PI/2,10,25,5,0xff6b35);
+ cont(-30,115,10,4,3.5,0xd62828);cont(-10,125,4,10,3.5,0x2a9d8f);cont(20,118,12,4,3.5,0x457b9d);
+ hp(0,17,16,5.5);hp(0,14,30,5.5);hp(75,8,-38,4.5);
+ const cg=new THREE.ConeGeometry(.5,1.2,8),cm=new THREE.MeshLambertMaterial({color:0xff5500});for(let i=0;i<5;i++)for(let j=0;j<4;j++){const c=new THREE.Mesh(cg,cm);c.position.set(45+i*6,.6,-110+j*6);c.castShadow=true;W2.add(c)}
+ lab('MEGA RAMP','#ff7777',0,26,-50);lab('SKY BRIDGE','#ffd23f',75,18,70);lab('BUNNY HOPS','#06d6a0',-30,10,45);lab('KICKERS','#ffb703',0,10,-95);lab('City Portal','#cc66ff',0,16,-130);
+ const bm=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,80,12,1,true),new THREE.MeshBasicMaterial({color:0xcc44ff,transparent:true,opacity:.3,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));bm.position.set(PS.x,40,PS.z);W2.add(bm)}
+function setWorld(n){world=n;CITY.forEach(o=>o.visible=n==1);W2.visible=n==2;if(n==2){car.x=0;car.z=-118}else{car.x=0;car.z=15}car.h=0;car.v=0;car.y=0;car.air=0;car.fl=0;mark.visible=false;toast(n==2?'🤸 Stunt Park! Find the ramps':'🏙 Back in the city')}
+// ---------- UI helpers
+let toastT;const toast=m=>{const t=$('toast');t.textContent=tr(m);t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)};
+const pop=(a,b)=>{const p=$('pop');p.innerHTML='<b>'+tr(a)+'</b><span>'+tr(b)+'</span>';p.classList.remove('go');void p.offsetWidth;p.classList.add('go')};
+const ACH=[['First Job','Complete 1 job',()=>S.st.jobs>=1],['Hustler','Complete 10 jobs',()=>S.st.jobs>=10],['Courier Pro','Complete 50 jobs',()=>S.st.jobs>=50],['Collector','Own 5 vehicles',()=>Object.keys(S.own).length>=5],['Speed Demon','Own a supercar or hypercar',()=>S.own[7]||S.own[9]],['Saver','Hold $10,000',()=>S.cash+S.bank>=1e4],['High Roller','Hold $100,000',()=>S.cash+S.bank>=1e5],['Road Warrior','Drive 50 km',()=>S.st.km>=50],['Trucker','Finish a truck haul',()=>S.st.types[3]>0],['Racer','Win a street race',()=>S.st.types[2]>0],['MILLIONAIRE','Hold $1,000,000',()=>S.cash+S.bank>=1e6]];
+function checkAch(){ACH.forEach((a,i)=>{if(!S.ach[i]&&a[2]()){S.ach[i]=1;if(i==10)pop('🏆 MILLIONAIRE!','You made it to $1,000,000!');else toast('🏅 Achievement: '+a[0])}})}
+// ---------- jobs
+let M=null,Jb=[];
+const inter=()=>[(Math.floor(Math.random()*9)-4)*60,(Math.floor(Math.random()*9)-4)*60],D=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+const JT=[['Package Delivery','📦',2,null,['Pick up the package','Deliver the package']],['Taxi Fare','🚕',2.4,null,['Pick up the passenger','Drop off the passenger']],['Street Race','🏁',3,null,[]],['Truck Haul','🚚',5,['Van','Pickup','Delivery','Heavy Truck'],['Load the cargo','Deliver the cargo']],['Passenger Shuttle','🚌',3.6,['Van','Delivery','Heavy Truck'],['Pick up the group','Drop off the group']],['Express Run','⚡',4.4,null,['Grab the parcel','Deliver it fast!']]];
+function genJobs(){Jb=[];for(let n=0;n<8;n++){const ti=n<6?n:Math.floor(Math.random()*6),t=JT[ti],d=1+Math.floor(Math.random()*3),[lo,hi]=[[120,250],[250,450],[450,750]][d-1];
+ let a,b,t0=0;do{a=inter()}while(D(a,[car.x,car.z])>220&&t0++<40);let pts=[a];
+ if(ti==2){for(let i=0;i<4;i++){let q,c=0;do{q=inter()}while((D(q,pts[i])<lo/4||D(q,pts[i])>hi/3)&&c++<60);pts.push(q)}}
+ else{t0=0;do{b=inter()}while((D(a,b)<lo||D(a,b)>hi)&&t0++<80);pts.push(b)}
+ let len=0;for(let i=1;i<pts.length;i++)len+=D(pts[i-1],pts[i]);len=Math.max(len,100);
+ const limit=ti==1?len/9+25:ti==2?len/(14+3*d)+15:ti==5?len/20+12:0;
+ Jb.push({ti,type:t[0],ico:t[1],d,len,pts,req:t[3],limit,need:[1,2,4][d-1],labels:ti==2?pts.map((p,i)=>'Checkpoint '+(i+1)+'/'+pts.length):t[4],reward:Math.round(len*t[2]*[1,1.7,2.8][d-1]/10)*10})}}
+function done(){const m=M,l0=lvl();let r=m.reward;if(m.limit&&m.t>m.limit*.4)r=Math.round(r*1.15);S.cash+=r;S.rep+=10*m.d;S.st.jobs++;S.st.earn+=r;S.st.types[m.ti]=(S.st.types[m.ti]||0)+1;M=null;pop('MISSION COMPLETE','+'+fmt(r)+' · +'+10*m.d+' rep');if(lvl()>l0)setTimeout(()=>toast('⭐ Reputation level '+lvl()+'!'),2000);checkAch();save()}
+// ---------- menu
+let tab='jobs',menuOpen=false,admOK=false,armReset=false,started=false;
+const today=()=>new Date().toDateString(),dAmt=()=>250+100*lvl();
+const ucost=i=>{const b=Math.max(300,V[S.cur][2]*.05);return Math.round(b*(S.own[S.cur].u[i]+1)/10)*10};
+const rcost=()=>Math.ceil(S.own[S.cur].dmg*(V[S.cur][2]/1500+4));
+const views={
+jobs(){let h='';if(M)h+=`<div class=card><b>Active: ${M.ico} ${M.type}</b> · <span class=g>${fmt(M.reward)}</span><button onclick="G.cancel()">Abandon</button></div>`;
+ h+='<button onclick="G.regen()">🔄 New jobs</button><div class=grid>';
+ Jb.forEach((j,i)=>{const lk=lvl()<j.need,bad=j.req&&!j.req.includes(V[S.cur][1]);h+=`<div class=card><b>${j.ico} ${j.type}</b> <em>${['','Easy','Medium','Hard'][j.d]}</em><br>${Math.round(j.len)} m · <b class=g>${fmt(j.reward)}</b>${j.limit?' · ⏱ '+Math.round(j.limit)+'s':''}<br><small>${lk?'🔒 Needs rep level '+j.need:bad?'Needs: '+j.req.join(' / '):'+'+10*j.d+' rep'}</small><br><button ${lk||bad?'disabled':''} onclick="G.take(${i})">Accept</button></div>`});return h+'</div>'},
+garage(){const o=S.own[S.cur],v=V[S.cur];let h='<h3>Your vehicles</h3><div class=grid>'+Object.keys(S.own).map(k=>`<div class="card ${k==S.cur?'sel':''}"><span class=dot style="background:${S.own[k].c}"></span><b>${V[k][0]}</b><br><small>${V[k][1]} · damage ${Math.round(S.own[k].dmg)}%</small><br><button ${k==S.cur?'disabled':''} onclick="G.use(${k})">${k==S.cur?'Driving':'Drive'}</button></div>`).join('')+'</div>';
+ h+=`<h3>Customize: ${v[0]}</h3><div class=sw>`+COL.map(c=>`<i style="background:${c}" onclick="G.col('${c}')"></i>`).join('')+'</div><div class=grid>';
+ h+=U.map((u,i)=>{const l=o.u[i],c=ucost(i);return `<div class=card><b>${u[0]}</b> Lv ${l}/5<div class=bar><i style="width:${l*20}%"></i></div><small>${u[1]}</small><br><button ${l>=5||S.cash<c?'disabled':''} onclick="G.up(${i})">${l>=5?'MAX':'Upgrade '+fmt(c)}</button></div>`}).join('')+'</div>';
+ const rc=rcost();return h+`<div class=card>🔧 Damage ${Math.round(o.dmg)}% <button ${o.dmg<1||S.cash<rc?'disabled':''} onclick="G.rep()">Repair ${fmt(rc)}</button></div>`},
+shop(){return '<div class=grid>'+V.map((v,i)=>[v,i]).sort((a,b)=>a[0][2]-b[0][2]).map(([v,i])=>{const own=S.own[i];return `<div class=card><b>${v[0]}</b> <em>${v[1]}</em>`+[['Speed',v[3]/400],['Accel',v[4]/17],['Handling',v[5]/2.8],['Brakes',v[6]/28]].map(s=>`<small>${s[0]}</small><div class=bar><i style="width:${Math.min(100,s[1]*100)}%"></i></div>`).join('')+`<button ${own||S.cash<v[2]?'disabled':''} onclick="G.buy(${i})">${own?'Owned':'Buy '+fmt(v[2])}</button></div>`}).join('')+'</div>'},
+bank(){const nw=S.cash+S.bank,A=[100,1000,10000];return `<div class=card>💵 Cash <b>${fmt(S.cash)}</b><br>🏦 Savings <b>${fmt(S.bank)}</b> <small>(+2% interest every in-game day)</small><br>${A.map(a=>`<button onclick="G.dep(${a})">Deposit ${fmt(a)}</button>`).join('')}<button onclick="G.dep(1e12)">All</button><br>${A.map(a=>`<button onclick="G.wd(${a})">Withdraw ${fmt(a)}</button>`).join('')}<button onclick="G.wd(1e12)">All</button></div><div class=card>🎁 Daily reward <b class=g>${fmt(dAmt())}</b> <button ${S.daily==today()?'disabled':''} onclick="G.day()">${S.daily==today()?'Come back tomorrow':'Claim'}</button></div><div class=card>🎯 Goal: <b>$1,000,000</b> (${Math.min(100,nw/1e4).toFixed(1)}%)<div class=bar><i style="width:${Math.min(100,nw/1e4)}%"></i></div></div>`},
+stats(){const s=S.st;return `<div class=card>Jobs done: <b>${s.jobs}</b> · Total earned: <b>${fmt(s.earn)}</b> · Distance: <b>${s.km.toFixed(1)} km</b> · Crashes: <b>${s.crash}</b><br>Reputation: <b>${S.rep}</b> (level ${lvl()}) · Vehicles: <b>${Object.keys(S.own).length}/${V.length}</b></div><h3>Achievements</h3><div class=grid>`+ACH.map((a,i)=>`<div class=card style="opacity:${S.ach[i]?1:.45}">${S.ach[i]?'🏅':'🔒'} <b>${a[0]}</b><br><small>${a[1]}</small></div>`).join('')+'</div>'},
+set(){return `<div class=card>Language <button onclick="G.lang()">${S.set.lang=='nl'?'Nederlands':'English'}</button><br>World <button onclick="G.world()">${world==1?'City → Stunt Park':'Stunt Park → City'}</button><br>Shadows <button onclick="G.sh()">${S.set.sh?'ON':'OFF'}</button><br>Weather <button onclick="G.wx()">${S.set.wx.toUpperCase()}</button><br><small>Controls: WASD/arrows drive · Shift gas · Space brake · E interact · G garage · J jobs · Esc menu</small></div><div class=card><button onclick="G.close()">▶ Resume</button> <button onclick="G.reset()">${armReset?'⚠ Click again to erase':'🗑 Reset save'}</button></div>`},
+admin(){if(!admOK)return `<div class=card>🔒 Admin access<br><input id=apw type=password placeholder="Password" style="padding:8px;border-radius:8px;border:0;margin:6px 6px 0 0"><button onclick="G.auth()">Unlock</button></div>`;
+ const A=S.adm,b=(k,l)=>`<button onclick="G.flag('${k}')">${l}: ${A[k]?'ON':'OFF'}</button>`;
+ return `<div class=card><b>💰 Money</b><br>${[1e3,1e4,1e5,1e6].map(a=>`<button onclick="G.add(${a})">+${fmt(a)}</button>`).join('')}<br><input id=acash type=number placeholder="Set cash" style="padding:8px;border-radius:8px;border:0;width:130px"><button onclick="G.setCash()">Set</button></div>`+
+ `<div class=card><b>⭐ Reputation</b> (level ${lvl()})<br><button onclick="G.rp(100)">+100</button><button onclick="G.rp(500)">+500</button><button onclick="G.rp(-1e9)">Reset</button></div>`+
+ `<div class=card><b>🚗 Vehicle</b><br><button onclick="G.all()">Unlock all vehicles</button><button onclick="G.max()">Max upgrades</button><button onclick="G.fix()">Repair + refuel</button></div>`+
+ `<div class=card><b>🎮 Cheats</b><br>${b('god','God mode')}${b('inf','Infinite fuel')}${b('frz','Freeze time')}${b('fps','FPS counter')}</div><div class=card><b>🚀 Speed</b> ×${A.spd||1}<br>${[.25,.5,1,2,3,5,10,100].map(x=>`<button ${(A.spd||1)==x?'style="background:#5dff9a;color:#111"':''} onclick="G.spd(${x})">${x==1?'Normal':'×'+x}</button>`).join('')}</div>`+
+ `<div class=card><b>⏰ Time</b><br>${[['Dawn',6],['Noon',12],['Dusk',18],['Night',0]].map(a=>`<button onclick="G.time(${a[1]})">${a[0]}</button>`).join('')}<button onclick="G.wx()">Weather: ${S.set.wx.toUpperCase()}</button></div>`+
+ `<div class=card><b>📍 Teleport</b><br><button onclick="G.world()">🤸 ${world==1?'Stunt Park':'City'}</button>${P.map((p,i)=>p.t=='park'?'':`<button onclick="G.tp(${i})">${p.n} #${i}</button>`).join('')}</div>`+
+ `<div class=card><b>💼 Jobs &amp; rewards</b><br><button onclick="G.finish()">Complete current job</button><button onclick="G.regen()">New jobs</button><button onclick="G.dclear()">Reset daily reward</button></div><div class=card><button onclick="G.lock()">🔒 Lock admin</button></div>`}};
+const TABS=[['jobs','💼 Jobs'],['garage','🔧 Garage'],['shop','🚗 Dealer'],['bank','🏦 Bank'],['stats','📊 Stats'],['set','⚙️ Settings']];
+TABS.push(['admin','🛠 Admin']);
+function render(){$('mbox').innerHTML=tr(`<div class=mh><b>RIDE &amp; RICHES</b><span>${fmt(S.cash)} · 🏦 ${fmt(S.bank)}</span><button onclick="G.close()">✕</button></div><div class=tabs>${TABS.map(t=>`<button class="${t[0]==tab?'on':''}" onclick="G.tab('${t[0]}')">${t[1]}</button>`).join('')}</div><div class=mb>${views[tab]()}</div>`)}
+function open(t){tab=t;menuOpen=true;if(t=='jobs'&&!Jb.length)genJobs();render();$('menu').classList.remove('hide')}
+function close(){menuOpen=false;$('menu').classList.add('hide');save()}
+const G=window.G={close,tab:t=>{tab=t;if(t=='jobs'&&!Jb.length)genJobs();render()},regen:()=>{genJobs();render()},
+ take(i){const j=Jb[i];M=Object.assign({},j,{i:0,t:j.limit});close();toast('Job accepted: '+j.labels[0])},
+ cancel(){M=null;render()},use(i){S.cur=i;build();render()},col(c){S.own[S.cur].c=c;build();render()},
+ up(i){const c=ucost(i),o=S.own[S.cur];if(S.cash>=c&&o.u[i]<5){S.cash-=c;o.u[i]++;if(i==4)o.fuel+=V[S.cur][11]*.15;checkAch();render()}},
+ rep(){const c=rcost();if(S.cash>=c){S.cash-=c;S.own[S.cur].dmg=0;render()}},
+ buy(i){const v=V[i];if(S.cash>=v[2]&&!S.own[i]){S.cash-=v[2];S.own[i]={c:v[10],u:[0,0,0,0,0,0],dmg:0,fuel:v[11]};S.cur=i;build();checkAch();toast('Purchased '+v[0]+'!');render()}},
+ dep(a){a=Math.min(a,S.cash);S.cash-=a;S.bank+=a;render()},wd(a){a=Math.min(a,S.bank);S.bank-=a;S.cash+=a;render()},
+ day(){if(S.daily!=today()){S.daily=today();S.cash+=dAmt();pop('DAILY REWARD','+'+fmt(dAmt()));render()}},
+ sh(){S.set.sh=S.set.sh?0:1;sun.castShadow=!!S.set.sh;render()},wx(){const o=['auto','clear','rain'];S.set.wx=o[(o.indexOf(S.set.wx)+1)%3];render()},
+ reset(){if(!armReset){armReset=true;render();setTimeout(()=>{armReset=false;if(menuOpen&&tab=='set')render()},4000);return}noSave=true;try{localStorage.removeItem('rr1')}catch(e){}location.reload()},
+ auth(){if($('apw').value.trim().toLowerCase()=='car'){admOK=true;render()}else toast('Wrong password')},lock(){admOK=false;render()},
+ add(a){S.cash+=a;checkAch();render()},setCash(){const v=parseInt($('acash').value);if(v>=0){S.cash=v;render()}},
+ rp(a){S.rep=Math.max(0,S.rep+a);render()},
+ all(){V.forEach((v,i)=>{if(!S.own[i])S.own[i]={c:v[10],u:[0,0,0,0,0,0],dmg:0,fuel:v[11]}});checkAch();render()},
+ max(){const o=S.own[S.cur];o.u=[5,5,5,5,5,5];o.fuel=eff().tank;render()},
+ fix(){const o=S.own[S.cur];o.dmg=0;o.fuel=eff().tank;render()},
+ flag(k){S.adm[k]=!S.adm[k];render()},spd(x){S.adm.spd=x;render()},lang(){S.set.lang=S.set.lang=='nl'?'en':'nl';applyLang();render()},world(){setWorld(world==1?2:1);if(menuOpen)close()},
+ time(h){S.t=h;render()},
+ tp(i){if(world!=1)setWorld(1);const p=P[i];car.x=p.x-30;car.z=p.z-30;car.h=0;car.v=0;close()},
+ finish(){if(M){M.i=M.pts.length;done()}render()},dclear(){S.daily='';render()}};
+// ---------- input
+const K={};
+addEventListener('keydown',e=>{if(!started||(e.target.tagName=='INPUT'&&e.code!='Escape'))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)&&!menuOpen)e.preventDefault();K[e.code]=1;if(e.repeat)return;
+ if(e.code=='Escape')menuOpen?close():open('set');else if(e.code=='KeyG')open('garage');else if(e.code=='KeyJ')open('jobs');else if(e.code=='Backquote')open('admin');else if(e.code=='KeyE'&&!menuOpen)interact()});
+addEventListener('keyup',e=>K[e.code]=0);addEventListener('blur',()=>{for(const k in K)K[k]=0});
+document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k,on=e=>{e.preventDefault();K[k]=1;b.classList.add('d')},off=()=>{K[k]=0;b.classList.remove('d')};b.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(n=>b.addEventListener(n,off))});
+$('bE').onclick=()=>interact();$('bM').onclick=()=>open('jobs');if(MOB)$('tc').classList.remove('hide');
+$('menu').addEventListener('pointerdown',e=>{if(e.target.id=='menu')close()});
+function nearP(){let b=null,bd=48;(world==1?P:[PS]).forEach(p=>{if(p.t=='park')return;const d=Math.hypot(p.x-car.x,p.z-car.z);if(d<bd){bd=d;b=p}});return b}
+function interact(){const p=nearP();if(!p)return;if(p.t=='portal')return G.world();if(p.t=='gas'){const o=S.own[S.cur],e=eff();let need=e.tank-o.fuel;if(need<.2)return toast('Tank is already full');const c=need*3;if(S.cash<c){need=S.cash/3}if(need<.05)return toast('Not enough cash for fuel');o.fuel+=need;S.cash-=need*3;toast('⛽ Refueled '+need.toFixed(1)+' L for '+fmt(need*3))}else open(p.t)}
+// ---------- loop
+const mc=$('mm').getContext('2d');
+function mmap(){const s=.22;mc.clearRect(0,0,130,130);mc.save();mc.beginPath();mc.arc(65,65,65,0,7);mc.clip();mc.fillStyle='#1b2a1b';mc.fillRect(0,0,130,130);
+ const m=(x,z)=>{const w=x-car.x,u=z-car.z,f=w*Math.sin(car.h)+u*Math.cos(car.h),l=w*Math.cos(car.h)-u*Math.sin(car.h);return[65-l*s,65-f*s]};
+ mc.strokeStyle='#6a707a';mc.lineWidth=3;mc.beginPath();for(let k=-5;k<=5&&world==1;k++){let a=m(k*60,-330),b=m(k*60,330);mc.moveTo(a[0],a[1]);mc.lineTo(b[0],b[1]);a=m(-330,k*60);b=m(330,k*60);mc.moveTo(a[0],a[1]);mc.lineTo(b[0],b[1])}mc.stroke();
+ if(world==2)R2.forEach(r=>{const q=m(r[0],r[1]);mc.fillStyle='#ff5555';mc.fillRect(q[0]-2,q[1]-2,5,5)});(world==1?P:[PS]).forEach(p=>{if(p.t=='park')return;const q=m(p.x,p.z);mc.fillStyle='#'+p.c.toString(16).padStart(6,'0');mc.fillRect(q[0]-3,q[1]-3,7,7)});
+ if(M){const p=M.pts[M.i];let q=m(p[0],p[1]);const dx=q[0]-65,dy=q[1]-65,d=Math.hypot(dx,dy);if(d>58)q=[65+dx/d*58,65+dy/d*58];mc.fillStyle='#ffd23f';mc.beginPath();mc.arc(q[0],q[1],5,0,7);mc.fill();mc.strokeStyle='#000';mc.lineWidth=1;mc.stroke()}
+ mc.restore();mc.fillStyle='#fff';mc.beginPath();mc.moveTo(65,57);mc.lineTo(70,70);mc.lineTo(60,70);mc.fill()}
+const sky=new THREE.Color(),cD=new THREE.Color(0x7ec8ff),cN=new THREE.Color(0x050818),cO=new THREE.Color(0xff8a4c),cR=new THREE.Color(0x6b7480);
+let night=0,fr=0,achT=0;
+function env(dt){if(!S.adm.frz)S.t+=dt/40;if(S.t>=24){S.t-=24;S.bank=Math.round(S.bank*1.02);if(S.bank>0)toast('🏦 Daily interest paid')}
+ if(S.set.wx=='auto'){rainT-=dt;if(rainT<0){rainOn=Math.random()<.35;rainT=60+Math.random()*90}}else rainOn=S.set.wx=='rain';
+ rainK+=((rainOn?1:0)-rainK)*Math.min(1,dt*.5);
+ const a=(S.t-6)/12*Math.PI,s=Math.sin(a),day=Math.max(0,Math.min(1,(s+.15)*2.5));night=1-day;
+ sky.copy(cN).lerp(cD,day);const dusk=Math.max(0,.25-Math.abs(s))*4;sky.lerp(cO,dusk*.5);sky.lerp(cR,rainK*(.5+.3*day));
+ scene.background=sky;scene.fog.color.copy(sky);scene.fog.far=420-rainK*200;
+ sun.position.set(car.x+Math.cos(a)*120,20+Math.max(0,s)*100,car.z+50);sun.target.position.set(car.x,0,car.z);sun.intensity=Math.max(0,s)*1.15*(1-rainK*.5);
+ hemi.intensity=.2+.65*day*(1-rainK*.3);wm.forEach(m=>m.emissiveIntensity=night*.9);
+ spot.intensity=(night>.3||rainK>.5)?1.8:0;
+ rain.visible=rainK>.05;rain.material.opacity=rainK*.5;
+ if(rain.visible){rain.position.set(car.x,0,car.z);const p=rp;for(let i=0;i<1800;i+=2){let y=p[i*3+1]-55*dt;if(y<0)y+=40;p[i*3+1]=y;p[i*3+4]=y+1.2}rg.attributes.position.needsUpdate=true}
+ roadMat.specular.setScalar(.05+rainK*.5);roadMat.shininess=5+rainK*80}
+function gh(x,z){let h=0;for(const r of R2){const dx=x-r[0],dz=z-r[1];if(r[6]=='p'){if(Math.abs(dx)<r[3]&&Math.abs(dz)<r[4])h=Math.max(h,r[5])}else{const s=Math.sin(r[2]),c=Math.cos(r[2]),lz=dx*s+dz*c,lx=dx*c-dz*s;if(Math.abs(lx)<r[3]/2&&lz>=0&&lz<=r[4])h=Math.max(h,r[5]*lz/r[4])}}return h}
+function air(dt,dx,dz,L,Rr,up,dn){const g=gh(car.x,car.z);
+ if(g>car.y+1){car.x-=dx;car.z-=dz;car.v*=-.3;return}
+ if(!car.air){if(g<car.y-.15){car.air=1;car.vy=Math.max(0,car.sv||0);car.t0=0;car.h0=car.h;car.fl=0}else{car.sv=(g-car.y)/dt;car.y=g}}
+ if(car.air){car.vy-=25*dt;car.y+=car.vy*dt;car.t0+=dt;car.h+=((L?1:0)-(Rr?1:0))*2.2*dt;car.fl+=((up?1:0)-(dn?1:0))*5*dt;
+  if(car.y<=g){const fl=Math.abs(car.fl)/6.283,nf=Math.round(fl),ns=Math.round(Math.abs(car.h-car.h0)/6.283),clean=Math.abs(fl-nf)<.15;car.air=0;car.y=g;car.vy=0;car.sv=0;car.fl=0;
+   if(car.t0>.6){if(clean){const r=Math.round(nf*250+ns*150+car.t0*30);S.cash+=r;S.st.stunt=Math.max(S.st.stunt||0,r);toast('🤸 Stunt! '+(nf?nf+' flip'+(nf>1?'s':'')+' · ':'')+(ns?ns+' spin'+(ns>1?'s':'')+' · ':'')+car.t0.toFixed(1)+'s air · +'+fmt(r))}else toast('💥 Bad landing!')}}}}
+function upd(dt){const e=eff(),o=S.own[S.cur];
+ const up=K.KeyW||K.ArrowUp||K.ShiftLeft||K.ShiftRight||K.tg,dn=K.KeyS||K.ArrowDown||K.tv,br=K.Space||K.tb,L=K.KeyA||K.ArrowLeft||K.tl,Rr=K.KeyD||K.ArrowRight||K.tr;
+ let a=0;if(up&&o.fuel>0)a=e.acc*(1-Math.max(0,car.v)/e.vmax);
+ if(dn){if(car.v>.5)car.v-=e.brk*dt;else a=-e.acc*.5*(1+car.v/(e.vmax*.3))}
+ if(br)car.v-=Math.sign(car.v)*Math.min(Math.abs(car.v),e.brk*1.3*dt);
+ car.v+=a*dt;car.v-=car.v*.12*dt;if(!up&&!dn&&!br)car.v-=Math.sign(car.v)*Math.min(Math.abs(car.v),2*dt);
+ car.v=Math.max(-e.vmax*.3,Math.min(e.vmax,car.v));
+ car.st+=(((L?1:0)-(Rr?1:0))-car.st)*Math.min(1,dt*8);
+ car.h+=car.st*e.hnd*dt*Math.min(1,Math.abs(car.v)/4)*(car.v>=0?1:-1)/(1+Math.abs(car.v)/e.vmax*1.2);
+ const dx=Math.sin(car.h)*car.v*dt,dz=Math.cos(car.h)*car.v*dt;car.x+=dx;car.z+=dz;
+ const dist=Math.abs(car.v)*dt;if(!S.adm.inf&&world==1)o.fuel=Math.max(0,o.fuel-dist/1000*V[S.cur][3]/250*2);S.st.km+=dist/1000;
+ const BD=world==1?335:145;car.x=Math.max(-BD,Math.min(BD,car.x));car.z=Math.max(-BD,Math.min(BD,car.z));
+ if(world==2)air(dt,dx,dz,L,Rr,up,dn);else car.y=0;
+ const hit=sp=>{if(Math.abs(car.v)>6&&!S.adm.god&&world==1){o.dmg=Math.min(100,o.dmg+Math.min(20,sp*.5));S.st.crash++;if(o.dmg>=100)toast('💥 Vehicle wrecked! Repair it at a garage')}car.v*=-.25};
+ for(const b of world==1?B:B2){if(car.y>(b.h||999)-.3)continue;const cx=Math.max(b.x-b.hx,Math.min(car.x,b.x+b.hx)),cz=Math.max(b.z-b.hz,Math.min(car.z,b.z+b.hz)),ex=car.x-cx,ez=car.z-cz,d=Math.hypot(ex,ez);
+  if(d<1.6){if(d>.001){car.x+=ex/d*(1.6-d);car.z+=ez/d*(1.6-d)}else car.x+=2;hit(Math.abs(car.v))}}
+ TR.forEach(t=>{if(t.stop>0)t.stop-=dt;else{t.p+=t.dir*t.s*dt;if(t.p>330)t.p=-330;if(t.p<-330)t.p=330}
+  const off=t.ax=='z'?-t.dir*3.5:t.dir*3.5,lx=t.k*60+off;let x,z,h;
+  if(t.ax=='z'){x=lx;z=t.p;h=t.dir>0?0:Math.PI}else{x=t.p;z=lx;h=t.dir>0?Math.PI/2:-Math.PI/2}
+  t.m.position.set(x,0,z);t.m.rotation.y=h;
+  const ex=car.x-x,ez=car.z-z,d=Math.hypot(ex,ez);if(world==1&&d<3.4&&t.stop<=0){t.stop=1.5;car.x+=ex/d*(3.4-d);car.z+=ez/d*(3.4-d);hit(Math.abs(car.v)+8)}});
+ pm.position.set(car.x,car.y||0,car.z);pm.rotation.y=car.h;pm.rotation.x=world==2?-(car.air?Math.atan2(car.vy,Math.max(5,Math.abs(car.v)))+car.fl:Math.atan2(gh(car.x+Math.sin(car.h)*1.5,car.z+Math.cos(car.h)*1.5)-gh(car.x-Math.sin(car.h)*1.5,car.z-Math.cos(car.h)*1.5),3)):0;pm.rotation.z=car.st*Math.min(1,Math.abs(car.v)/20)*(S.cur<2?.5:.06);
+ const f=Math.sin(car.h),g=Math.cos(car.h),sp=Math.abs(car.v);
+ cam.position.lerp(new THREE.Vector3(car.x-f*(8+sp*.05),4+sp*.01+(car.y||0)*.8,car.z-g*(8+sp*.05)),Math.min(1,dt*6));cam.lookAt(car.x+f*5,1.5+(car.y||0),car.z+g*5);
+ cam.fov+=(62+Math.min(25,sp*.35)-cam.fov)*.08;cam.updateProjectionMatrix();
+ spot.position.set(car.x+f*2,1,car.z+g*2);spot.target.position.set(car.x+f*30,0,car.z+g*30);
+ if(M&&world==1){const p=M.pts[M.i];mark.visible=true;mark.position.set(p[0],45,p[1]);mark.material.color.setHex(M.ti==2?0x33ddff:M.i==0?0xffcc00:0x33ff88);
+  if(Math.hypot(car.x-p[0],car.z-p[1])<14){M.i++;if(M.i>=M.pts.length)done();else toast('✔ '+M.labels[M.i-1]+' → '+M.labels[M.i])}
+  else if(M.limit){M.t-=dt;if(M.t<=0){S.rep=Math.max(0,S.rep-5);M=null;pop('TIME\'S UP','Job failed · -5 rep')}}}else mark.visible=false;
+ if((achT+=dt)>2){achT=0;checkAch()}}
+function hud(){const o=S.own[S.cur],e=eff(),p=nearP();
+ $('cash').textContent=fmt(S.cash);$('bank').textContent='🏦 '+fmt(S.bank);$('rep').textContent=tr('⭐ Level '+lvl()+' ('+S.rep+' rep)');$('veh').textContent='🚘 '+V[S.cur][0];
+ $('spd').textContent=Math.round(Math.abs(car.v)*3.6);$('fb').style.width=Math.min(100,o.fuel/e.tank*100)+'%';$('db').style.width=o.dmg+'%';
+ const hh=Math.floor(S.t),mm=Math.floor((S.t-hh)*60);$('clock').textContent=(rainK>.4?'🌧 ':night>.5?'🌙 ':'☀️ ')+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+(S.adm.fps?' · '+Math.round(fpsV)+' fps':'');
+ $('mis').innerHTML=tr(world==2?'🤸 Stunt Park · W/S flip · A/D spin · best '+fmt(S.st.stunt||0):M?`${M.ico} <b>${M.labels[M.i]}</b><br>${Math.round(Math.hypot(car.x-M.pts[M.i][0],car.z-M.pts[M.i][1]))} m · <span class=g>${fmt(M.reward)}</span>${M.limit?' · ⏱ '+Math.max(0,Math.ceil(M.t))+'s':''}`:'No active job · press J');
+ const pr=$('pr');if(p){pr.style.display='block';pr.textContent=tr((MOB?'Tap E':'[E]')+' · '+p.n+(p.t=='gas'?' (refuel $3/L)':''))}else pr.style.display='none'}
+build();sun.castShadow=!!S.set.sh;checkAch();
+let last=performance.now(),fpsV=60;
+function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;
+ fpsV+=(1/Math.max(dt,.001)-fpsV)*.05;try{if(started&&!menuOpen){upd(dt);env(dt)}if(++fr%5==0){hud();mmap()}}catch(e){console.error(e)}
+ R.render(scene,cam)}
+setInterval(save,4000);addEventListener('beforeunload',save);document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+if(!S.daily||S.daily!=today())setTimeout(()=>toast('🎁 Daily reward available at the Bank!'),1500);
+else setTimeout(()=>toast('Drive to a glowing building and press E · J for jobs'),1200);
+function applyLang(){const sm=document.querySelectorAll('#bt small'),ps=$('start').querySelectorAll('p');sm[1].textContent=tr('⛽ Fuel');sm[2].textContent=tr('🔧 Damage');ps[0].textContent=tr('Earn money · buy vehicles · become a millionaire');ps[1].innerHTML=tr('WASD/Arrows drive · Shift gas · Space brake · E interact · G garage · J jobs · Esc menu · Backquote key = admin<br>Mobile: on-screen buttons');$('go').textContent=tr('▶ PLAY');$('gl').textContent=S.set.lang=='nl'?'🌐 Nederlands · switch to English':'🌐 English · wissel naar Nederlands';document.documentElement.lang=S.set.lang||'en'}
+$('go').insertAdjacentHTML('afterend','<br><button id="gl" style="margin-top:14px"></button>');$('gl').onclick=()=>G.lang();applyLang();
+$('go').onclick=()=>{started=true;$('start').classList.add('hide');last=performance.now()};
+cam.position.set(0,5,5);requestAnimationFrame(loop);
+}
+</script>
+<script>
+(function(){function go(){try{boot()}catch(e){console.error(e);fail('The game hit an error while starting: '+e.message)}}
+if(window.THREE)go();else{var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js';s.onload=go;s.onerror=function(){fail('The 3D engine (Three.js) could not be loaded. Check your internet connection and reload.')};document.head.appendChild(s)}})();
+</script>
+</body></html>
